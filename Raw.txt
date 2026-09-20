@@ -1,0 +1,2562 @@
+==============================================================================================================================================
+                                           CODE
+==============================================================================================================================================
+
+#create structure based chunks(its for practical paper I)
+experiment_chunks = []
+
+text = pages[9].page_content
+lines = text.split("\n")
+
+current_experiment = None
+current_text = []
+
+for line in lines:
+
+    line = line.strip()
+
+    if not line:
+        continue
+
+    # Case 1: Experiment number and title are on the same line
+    match = re.match(r"^(\d{1,2})\s+(.*)", line)
+
+    # Case 2: Experiment number appears alone on a line
+    standalone = re.match(r"^(\d{1,2})$", line)
+
+    if match or standalone:
+
+        # Save previous experiment
+        if current_experiment is not None:
+
+            experiment_chunks.append(
+                Document(
+                    page_content=(
+                        f"Practical Paper-I. "
+                        f"Experiment {current_experiment}: "
+                        + " ".join(current_text)
+                    ),
+                    metadata={
+                        "page": pages[9].metadata.get("page", 0) + 1,
+                        "type": "experiment",
+                        "experiment_number": current_experiment
+                    }
+                )
+            )
+
+        # Start new experiment
+        if match:
+            current_experiment = match.group(1)
+            current_text = [match.group(2)]
+
+        else:
+            current_experiment = standalone.group(1)
+            current_text = []
+
+    else:
+
+        # Continue adding text to current experiment
+        if current_experiment is not None:
+            current_text.append(line)
+
+
+# Save the last experiment
+if current_experiment is not None:
+
+    experiment_chunks.append(
+        Document(
+            page_content=(
+                f"Practical Paper-I. "
+                f"Experiment {current_experiment}: "
+                + " ".join(current_text)
+            ),
+            metadata={
+                "page": pages[9].metadata.get("page", 0) + 1,
+                "type": "experiment",
+                "experiment_number": current_experiment
+            }
+        )
+    )
+
+
+print("Number of experiment chunks:", len(experiment_chunks))
+
+==============================================================================================================================================
+                                          EXPLANATION
+==============================================================================================================================================
+Absolutely. This code is doing structure-aware chunking specifically for Practical Paper-I. Its main goal is to take the text from PDF page 10 and turn each experiment into a separate LangChain Document.
+
+For example, instead of one large page:
+
+Experiment 1 ...
+Experiment 2 ...
+Experiment 3 ...
+...
+Experiment 11 ...
+
+you want:
+
+Chunk 1 → Experiment 1
+Chunk 2 → Experiment 2
+Chunk 3 → Experiment 3
+...
+Chunk 11 → Experiment 11
+
+Let's go through it step by step.
+
+1. Create an empty list
+experiment_chunks = []
+
+This creates an empty list where you will store the experiment chunks.
+
+Initially:
+
+experiment_chunks = []
+
+As the code finds experiments, it will become:
+
+experiment_chunks = [
+    Document(... Experiment 1 ...),
+    Document(... Experiment 2 ...),
+    Document(... Experiment 3 ...),
+    ...
+]
+2. Get the text from PDF page 10
+text = pages[9].page_content
+
+Remember that Python uses zero-based indexing.
+
+So:
+
+pages[0] → PDF page 1
+pages[1] → PDF page 2
+...
+pages[9] → PDF page 10
+
+Your Practical Paper-I content is on PDF page 10, so:
+
+pages[9]
+
+gets that page.
+
+Then:
+
+.page_content
+
+extracts the actual text from that page.
+
+So:
+
+text = pages[9].page_content
+
+means:
+
+Get the text of PDF page 10 and store it in text.
+
+3. Split the page into individual lines
+lines = text.split("\n")
+
+PDF text might look something like:
+
+1
+Fitting of binomial distribution.
+2
+Fitting of Poisson distribution.
+3
+Generation of random samples.
+
+split("\n") breaks it at every newline.
+
+So it becomes approximately:
+
+[
+    "1",
+    "Fitting of binomial distribution.",
+    "2",
+    "Fitting of Poisson distribution.",
+    "3",
+    "Generation of random samples."
+]
+
+This is important because your code wants to examine one line at a time.
+
+4. Create variables for the current experiment
+current_experiment = None
+current_text = []
+
+These two variables keep track of the experiment currently being processed.
+
+current_experiment
+
+Stores the experiment number.
+
+Initially:
+
+current_experiment = None
+
+After finding Experiment 1:
+
+current_experiment = "1"
+
+After finding Experiment 2:
+
+current_experiment = "2"
+
+and so on.
+
+current_text
+
+Stores all the text belonging to the current experiment.
+
+Initially:
+
+current_text = []
+
+For example, while processing Experiment 9:
+
+current_text = [
+    "Finding summary statistics using summary() and fivenum() functions.",
+    "Calculate arithmetic mean...",
+    "geometric mean...",
+    "harmonic mean..."
+]
+5. Go through every line
+for line in lines:
+
+This tells Python:
+
+Take each line from the PDF, one at a time.
+
+For example:
+
+line 1 → "1"
+line 2 → "Fitting of binomial distribution."
+line 3 → "2"
+line 4 → "Fitting of Poisson distribution."
+6. Remove unnecessary spaces
+line = line.strip()
+
+Suppose the PDF extracted:
+
+"     Experiment 9     "
+
+.strip() changes it to:
+
+"Experiment 9"
+
+It removes whitespace from the beginning and end.
+
+7. Ignore empty lines
+if not line:
+    continue
+
+If the PDF contains an empty line:
+
+""
+
+there is no useful information to process.
+
+continue tells Python:
+
+Skip this line and move to the next one.
+
+8. Detect an experiment number + title on the same line
+match = re.match(r"^(\d{1,2})\s+(.*)", line)
+
+This is the most complicated-looking part, but it is basically pattern matching.
+
+It tries to recognize something like:
+
+1 Fitting of Binomial Distribution
+
+or:
+
+9 Finding summary statistics using summary() and fivenum()
+Breaking the regex down
+^
+
+means:
+
+Start of the line.
+
+(\d{1,2})
+
+means:
+
+Find 1 or 2 digits.
+
+So it can find:
+
+1
+9
+10
+11
+
+Then:
+
+\s+
+
+means:
+
+One or more spaces.
+
+Finally:
+
+(.*)
+
+means:
+
+Capture everything after that.
+
+So:
+
+9 Finding summary statistics...
+
+becomes:
+
+group(1) → "9"
+group(2) → "Finding summary statistics..."
+
+That's why later you can use:
+
+match.group(1)
+
+for the experiment number.
+
+And:
+
+match.group(2)
+
+for the title/text.
+
+9. Detect an experiment number standing alone
+standalone = re.match(r"^(\d{1,2})$", line)
+
+This handles a different PDF structure.
+
+Sometimes the PDF might extract:
+
+9
+Finding summary statistics using summary()...
+
+instead of:
+
+9 Finding summary statistics using summary()...
+
+The first line is simply:
+
+9
+
+The regex:
+
+r"^(\d{1,2})$"
+
+means:
+
+The entire line must consist of 1 or 2 digits.
+
+So:
+
+9
+
+matches.
+
+But:
+
+Finding summary statistics
+
+doesn't.
+
+10. Check whether a new experiment was found
+if match or standalone:
+
+This means:
+
+If the current line looks like a new experiment number, do the following.
+
+It handles both formats:
+
+Format A
+9 Finding summary statistics...
+
+match is found.
+
+Format B
+9
+Finding summary statistics...
+
+standalone is found.
+
+11. Save the previous experiment
+
+This is very important:
+
+if current_experiment is not None:
+
+Suppose you're currently processing Experiment 8 and suddenly encounter:
+
+9
+
+That means Experiment 8 has ended.
+
+So before starting Experiment 9, the code saves Experiment 8.
+
+experiment_chunks.append(
+    Document(
+        ...
+    )
+)
+
+This creates a LangChain Document.
+
+12. Build the actual chunk text
+page_content=(
+    f"Practical Paper-I. "
+    f"Experiment {current_experiment}: "
+    + " ".join(current_text)
+)
+
+Suppose:
+
+current_experiment = "9"
+
+and:
+
+current_text = [
+    "Finding summary statistics using summary() and fivenum() functions.",
+    "Calculate arithmetic mean...",
+    "geometric mean...",
+    "harmonic mean..."
+]
+
+Then:
+
+" ".join(current_text)
+
+combines them:
+
+Finding summary statistics using summary() and fivenum() functions. Calculate arithmetic mean... geometric mean... harmonic mean...
+
+And the final chunk becomes:
+
+Practical Paper-I. Experiment 9: Finding summary statistics using summary() and fivenum() functions. Calculate arithmetic mean... geometric mean... harmonic mean...
+
+This is a much better RAG chunk than blindly splitting the page into 500-character pieces because the entire experiment stays together.
+
+13. Add metadata
+metadata={
+    "page": pages[9].metadata.get("page", 0) + 1,
+    "type": "experiment",
+    "experiment_number": current_experiment
+}
+
+This is extremely useful for your RAG system.
+
+You're storing information about the chunk.
+
+"page"
+pages[9].metadata.get("page", 0) + 1
+
+If LangChain says:
+
+"page": 9
+
+you add 1:
+
+9 + 1 = 10
+
+So your metadata shows the human-readable PDF page:
+
+"page": 10
+"type"
+"type": "experiment"
+
+This tells you:
+
+This chunk represents an experiment.
+
+"experiment_number"
+"experiment_number": current_experiment
+
+For Experiment 9:
+
+"experiment_number": "9"
+
+So your chunk metadata might look like:
+
+{
+    "page": 10,
+    "type": "experiment",
+    "experiment_number": "9"
+}
+
+This is particularly useful later when you want to inspect retrieval results.
+
+14. Start the new experiment
+
+After saving the previous experiment, the code starts collecting the new one.
+
+if match:
+    current_experiment = match.group(1)
+    current_text = [match.group(2)]
+
+For:
+
+9 Finding summary statistics...
+
+you get:
+
+current_experiment = "9"
+
+and:
+
+current_text = [
+    "Finding summary statistics..."
+]
+
+Notice that current_text is reset.
+
+This is important because you don't want Experiment 8's text mixed with Experiment 9.
+
+15. Handle the standalone-number case
+
+If the experiment number appeared alone:
+
+9
+
+then:
+
+else:
+    current_experiment = standalone.group(1)
+    current_text = []
+
+So:
+
+current_experiment = "9"
+
+and:
+
+current_text = []
+
+The next lines will then be added to Experiment 9.
+
+16. Add ordinary lines to the current experiment
+
+Now consider this part:
+
+else:
+
+    if current_experiment is not None:
+        current_text.append(line)
+
+This means:
+
+If the current line is NOT a new experiment number, add it to the experiment currently being collected.
+
+For example:
+
+9
+Finding summary statistics...
+Calculate arithmetic mean...
+Calculate geometric mean...
+Calculate harmonic mean...
+10
+
+While processing Experiment 9:
+
+current_text = [
+    "Finding summary statistics...",
+    "Calculate arithmetic mean...",
+    "Calculate geometric mean...",
+    "Calculate harmonic mean..."
+]
+
+When 10 is encountered, the code recognizes a new experiment and saves Experiment 9.
+
+17. Why do we need this final section?
+
+At the end you have:
+
+if current_experiment is not None:
+
+    experiment_chunks.append(
+        Document(
+            ...
+        )
+    )
+
+This handles the last experiment.
+
+Why?
+
+Imagine the PDF ends with:
+
+10 ...
+11 Finding summary statistics...
+
+There is no Experiment 12 to tell the program:
+
+"Experiment 11 has ended."
+
+Therefore, without this final block, Experiment 11 would remain sitting inside:
+
+current_text
+
+and never be added to experiment_chunks.
+
+So this section says:
+
+Once we've reached the end of the page, save whatever experiment is currently being collected.
+
+18. Finally, count the chunks
+print("Number of experiment chunks:", len(experiment_chunks))
+
+If your parser correctly detects all experiments, you should get:
+
+Number of experiment chunks: 11
+
+That means:
+
+Experiment 1 → Chunk
+Experiment 2 → Chunk
+Experiment 3 → Chunk
+...
+Experiment 11 → Chunk
+The complete logic in simple terms
+
+Your entire code can be understood as:
+
+Take PDF page 10
+       ↓
+Split it into lines
+       ↓
+Read lines one by one
+       ↓
+Is this a new experiment?
+       │
+       ├── YES
+       │     ↓
+       │  Save previous experiment
+       │     ↓
+       │  Start new experiment
+       │
+       └── NO
+             ↓
+          Add line to current experiment
+       ↓
+Reach end of page
+       ↓
+Save final experiment
+       ↓
+11 experiment chunks
+Why this is called "structure-aware chunking"
+
+The important point for your assignment is that you are not saying "every 500 characters = one chunk."
+
+Instead, you're using the document's natural structure:
+
+Experiment 1
+Experiment 2
+Experiment 3
+...
+Experiment 11
+
+to determine where chunks begin and end.
+
+So a query such as:
+
+"What is the title of Experiment 9?"
+
+can potentially retrieve a chunk whose metadata explicitly says:
+
+{
+    "type": "experiment",
+    "experiment_number": "9",
+    "page": 10
+}
+
+==============================================================================================================================================
+                                           CODE
+==============================================================================================================================================
+for chunk in experiment_chunks:
+    print("\n" + "=" * 80)
+    print("Experiment:", chunk.metadata["experiment_number"])
+    print(chunk.page_content)
+==============================================================================================================================================
+                                          EXPLANATION
+==============================================================================================================================================
+This code is used to check and display all the experiment chunks you created. It is basically a verification/debugging step.
+
+for chunk in experiment_chunks:
+    print("\n" + "=" * 80)
+    print("Experiment:", chunk.metadata["experiment_number"])
+    print(chunk.page_content)
+
+Let's break it down.
+
+1. Loop through every chunk
+for chunk in experiment_chunks:
+
+experiment_chunks contains your separate experiment Document objects.
+
+For example:
+
+experiment_chunks
+│
+├── Experiment 1
+├── Experiment 2
+├── Experiment 3
+├── ...
+└── Experiment 11
+
+The for loop takes them one at a time.
+
+First:
+
+chunk → Experiment 1
+
+then:
+
+chunk → Experiment 2
+
+and eventually:
+
+chunk → Experiment 11
+2. Print a separator
+print("\n" + "=" * 80)
+
+"=" * 80 means:
+
+Repeat the = character 80 times.
+
+So you get:
+
+================================================================================
+
+The \n adds a blank line before it.
+
+This is only for making the output easier to read. It doesn't change your chunks.
+
+3. Print the experiment number
+print("Experiment:", chunk.metadata["experiment_number"])
+
+Earlier, when you created each Document, you stored:
+
+metadata={
+    "page": ...,
+    "type": "experiment",
+    "experiment_number": current_experiment
+}
+
+So each chunk knows its experiment number.
+
+For example:
+
+chunk.metadata
+
+might contain:
+
+{
+    "page": 10,
+    "type": "experiment",
+    "experiment_number": "9"
+}
+
+Therefore:
+
+chunk.metadata["experiment_number"]
+
+returns:
+
+9
+
+and the output becomes:
+
+Experiment: 9
+4. Print the actual chunk text
+print(chunk.page_content)
+
+page_content contains the actual text you created earlier.
+
+For example, for Experiment 9, it might print:
+
+Practical Paper-I. Experiment 9: Finding summary statistics using summary() and fivenum() functions. Calculate arithmetic mean (A.M.), geometric mean (G.M.), harmonic mean (H.M.), median, mode, quantiles...
+So the output will look something like
+================================================================================
+Experiment: 1
+Practical Paper-I. Experiment 1: ...
+
+================================================================================
+Experiment: 2
+Practical Paper-I. Experiment 2: ...
+
+================================================================================
+Experiment: 3
+Practical Paper-I. Experiment 3: ...
+
+...
+
+================================================================================
+Experiment: 9
+Practical Paper-I. Experiment 9: Finding summary statistics using summary() and fivenum() functions...
+
+...
+
+================================================================================
+Experiment: 11
+Practical Paper-I. Experiment 11: ...
+Why are you doing this?
+
+This is an important validation step.
+
+You want to confirm that your structure-aware chunking actually worked:
+
+Did it detect all 11 experiments?
+Did Experiment 1 contain only Experiment 1's text?
+Did Experiment 9 contain the complete Experiment 9 text?
+Did Experiment 9 accidentally include Experiment 10?
+Is the experiment number stored correctly in metadata?
+
+So this code doesn't create or modify chunks.
+
+It simply prints the chunks so you can inspect whether your chunking logic worked correctly.
+
+In your RAG assignment, this is useful evidence that your structure-aware chunking successfully preserved the logical experiment boundaries.
+==============================================================================================================================================
+                                           CODE
+==============================================================================================================================================
+# ================================================================
+# STRUCTURE-AWARE CHUNKING FOR THE COMPLETE PDF
+# Statistics_syllabus.pdf
+# ================================================================
+from langchain_core.documents import Document
+print("Document import successful!")
+from collections import Counter
+
+# ============================================================================
+# 1. RESET STRUCTURE CHUNKS
+# ============================================================================
+
+structure_chunks = []
+
+
+# ============================================================================
+# 2. HELPER FUNCTIONS
+# ============================================================================
+
+def clean_text(text):
+    """Clean excessive spaces while preserving useful content."""
+    text = text.replace("\x00", " ")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n\s*\n+", "\n\n", text)
+    return text.strip()
+
+
+def add_chunk(page_content, metadata):
+    """Add a Document chunk to structure_chunks."""
+    structure_chunks.append(
+        Document(
+            page_content=page_content.strip(),
+            metadata=metadata
+        )
+    )
+
+
+# ============================================================================
+# 3. DOCUMENT INFORMATION - PAGE 1
+# ============================================================================
+
+page1_text = pages[0].page_content
+
+add_chunk(
+    clean_text(page1_text),
+    {
+        "type": "document_info",
+        "page": 1,
+        "source": "Statistics_syllabus.pdf"
+    }
+)
+
+
+# ============================================================================
+# 4. COURSE STRUCTURE - PAGE 2
+# ============================================================================
+
+page2_text = pages[1].page_content
+
+add_chunk(
+    clean_text(page2_text),
+    {
+        "type": "course_structure",
+        "page": 2,
+        "source": "Statistics_syllabus.pdf"
+    }
+)
+
+
+# ============================================================================
+# 5. THEORY PAPER INFORMATION
+# ============================================================================
+
+theory_papers = [
+    {
+        "semester": "III",
+        "paper": "Probability Distributions - I",
+        "start_page": 3,
+        "end_page": 5
+    },
+    {
+        "semester": "III",
+        "paper": "Probability Distributions - II",
+        "start_page": 7,
+        "end_page": 8
+    },
+    {
+        "semester": "IV",
+        "paper": "Statistical Methods",
+        "start_page": 11,
+        "end_page": 12
+    },
+    {
+        "semester": "IV",
+        "paper": "Sampling Distributions and Exact Tests",
+        "start_page": 14,
+        "end_page": 15
+    }
+]
+
+
+# ============================================================================
+# 6. COURSE OUTCOMES
+# ============================================================================
+# We extract the Course Outcomes section separately for each paper.
+# This creates 4 theory course-outcome chunks.
+# ============================================================================
+
+def extract_course_outcomes(text):
+    """
+    Extract text between 'Course Outcomes' and the next major section.
+    """
+
+    lines = text.splitlines()
+
+    start_index = None
+    end_index = None
+
+    for i, line in enumerate(lines):
+
+        if re.search(r"Course\s+Outcomes", line, re.I):
+            start_index = i
+            continue
+
+        if start_index is not None:
+
+            # Stop when Units / Contents / Experiment section begins
+            if re.search(
+                r"Units\s+and\s+Contents|Expt\.\s*No\.|Units\s*&\s*Contents",
+                line,
+                re.I
+            ):
+                end_index = i
+                break
+
+    if start_index is None:
+        return ""
+
+    if end_index is None:
+        end_index = len(lines)
+
+    outcome_lines = lines[start_index:end_index]
+
+    return clean_text("\n".join(outcome_lines))
+
+
+for paper_info in theory_papers:
+
+    start_page = paper_info["start_page"]
+
+    text = pages[start_page - 1].page_content
+
+    outcome_text = extract_course_outcomes(text)
+
+    if outcome_text:
+
+        add_chunk(
+            outcome_text,
+            {
+                "type": "course_outcomes",
+                "semester": paper_info["semester"],
+                "paper": paper_info["paper"],
+                "page": start_page,
+                "source": "Statistics_syllabus.pdf"
+            }
+        )
+
+
+# ============================================================================
+# 7. PRACTICAL PAPER-I COURSE OUTCOMES
+# ============================================================================
+
+page10_text = pages[9].page_content
+
+outcome_text_p1 = extract_course_outcomes(page10_text)
+
+if outcome_text_p1:
+
+    add_chunk(
+        outcome_text_p1,
+        {
+            "type": "course_outcomes",
+            "semester": "III",
+            "paper": "Practical Paper - I",
+            "page": 10,
+            "source": "Statistics_syllabus.pdf"
+        }
+    )
+
+
+# ============================================================================
+# 8. PRACTICAL PAPER-II COURSE OUTCOMES
+# ============================================================================
+
+page16_text = pages[15].page_content
+
+outcome_text_p2 = extract_course_outcomes(page16_text)
+
+if outcome_text_p2:
+
+    add_chunk(
+        outcome_text_p2,
+        {
+            "type": "course_outcomes",
+            "semester": "IV",
+            "paper": "Practical Paper - II",
+            "page": 16,
+            "source": "Statistics_syllabus.pdf"
+        }
+    )
+
+
+# ============================================================================
+# 9. UNIT PARSER
+# ============================================================================
+#
+# Important:
+# The PDF extraction contains malformed text such as:
+#
+# [1 0 Lectures]
+# [05 Lectu res]
+# [06 Lectu res]
+#
+# Therefore the regex below intentionally handles spaces inside the number
+# and inside the word "Lectures".
+# ============================================================================
+
+def parse_units_for_paper(paper_info):
+
+    semester = paper_info["semester"]
+    paper = paper_info["paper"]
+
+    start_page = paper_info["start_page"]
+    end_page = paper_info["end_page"]
+
+    current_unit_number = None
+    current_unit_title = None
+    current_unit_lectures = None
+    current_unit_content = []
+    current_unit_pages = []
+
+    for page_number in range(start_page, end_page + 1):
+
+        text = pages[page_number - 1].page_content
+        lines = text.splitlines()
+
+        for line in lines:
+
+            stripped = line.strip()
+
+            if not stripped:
+                continue
+
+            # ----------------------------------------------------------------
+            # Detect Unit heading
+            # ----------------------------------------------------------------
+            #
+            # Handles:
+            #
+            # Unit 1: Something [10 Lectures]
+            # Unit 3: Something [1 0 Lectures]
+            # Unit 2: Something [05 Lectu res]
+            #
+            # ----------------------------------------------------------------
+
+            unit_match = re.match(
+                r"^Unit\s+(\d+)\s*:\s*(.*?)"
+                r"\[\s*([0-9\s]+)\s*Lectu\s*res?\s*\]",
+                stripped,
+                re.I
+            )
+
+            if unit_match:
+
+                # ------------------------------------------------------------
+                # Save previous unit
+                # ------------------------------------------------------------
+
+                if current_unit_number is not None:
+
+                    content = "\n".join(
+                        text
+                        for page_number, text in current_unit_content
+                    ).strip()
+
+                    add_chunk(
+                        content,
+                        {
+                            "type": "unit",
+                            "semester": semester,
+                            "paper": paper,
+                            "unit_number": current_unit_number,
+                            "unit_title": current_unit_title,
+                            "lectures": [current_unit_lectures],
+                            "start_page": min(current_unit_pages),
+                            "end_page": max(current_unit_pages),
+                            "source": "Statistics_syllabus.pdf"
+                        }
+                    )
+
+                # ------------------------------------------------------------
+                # Start new unit
+                # ------------------------------------------------------------
+
+                current_unit_number = unit_match.group(1)
+
+                current_unit_title = unit_match.group(2).strip()
+
+                current_unit_lectures = re.sub(
+                    r"\s+",
+                    "",
+                    unit_match.group(3)
+                )
+
+                current_unit_content = [
+                    (page_number, stripped)
+                ]
+
+                current_unit_pages = [
+                    page_number
+                ]
+
+            else:
+
+                # ------------------------------------------------------------
+                # Continue current unit
+                # ------------------------------------------------------------
+
+                if current_unit_number is not None:
+
+                    current_unit_content.append(
+                        (page_number, stripped)
+                    )
+
+                    current_unit_pages.append(
+                        page_number
+                    )
+
+    # ------------------------------------------------------------------------
+    # Save final unit
+    # ------------------------------------------------------------------------
+
+    if current_unit_number is not None:
+
+        content = "\n".join(
+            text
+            for page_number, text in current_unit_content
+        ).strip()
+
+        add_chunk(
+            content,
+            {
+                "type": "unit",
+                "semester": semester,
+                "paper": paper,
+                "unit_number": current_unit_number,
+                "unit_title": current_unit_title,
+                "lectures": [current_unit_lectures],
+                "start_page": min(current_unit_pages),
+                "end_page": max(current_unit_pages),
+                "source": "Statistics_syllabus.pdf"
+            }
+        )
+
+
+# Parse all four theory papers
+
+for paper_info in theory_papers:
+    parse_units_for_paper(paper_info)
+
+
+# ============================================================================
+# 10. REFERENCES
+# ============================================================================
+#
+# One coherent reference chunk for each theory paper.
+# ============================================================================
+
+reference_pages = [
+    {
+        "semester": "III",
+        "paper": "Probability Distributions - I",
+        "page": 6
+    },
+    {
+        "semester": "III",
+        "paper": "Probability Distributions - II",
+        "page": 9
+    },
+    {
+        "semester": "IV",
+        "paper": "Statistical Methods",
+        "page": 13
+    },
+    {
+        "semester": "IV",
+        "paper": "Sampling Distributions and Exact Tests",
+        "page": 15
+    }
+]
+
+
+for ref in reference_pages:
+
+    text = pages[ref["page"] - 1].page_content
+
+    add_chunk(
+        clean_text(text),
+        {
+            "type": "reference",
+            "semester": ref["semester"],
+            "paper": ref["paper"],
+            "page": ref["page"],
+            "source": "Statistics_syllabus.pdf"
+        }
+    )
+
+
+# ============================================================================
+# 11. EXISTING PRACTICAL PAPER-I EXPERIMENTS
+# ============================================================================
+#
+# IMPORTANT:
+# Your Practical Paper-I parser is already working correctly.
+#
+# It produced 11 experiments and Experiment 9 is confirmed.
+#
+# We reuse those chunks directly.
+# We DO NOT parse Practical Paper-I again.
+# ============================================================================
+
+print("Adding existing Practical Paper-I chunks...")
+
+print(
+    "Practical Paper-I experiments:",
+    len(experiment_chunks)
+)
+
+for chunk in experiment_chunks:
+
+    # Make a copy of the metadata so that the original chunks are not changed.
+    metadata = dict(chunk.metadata)
+
+    # Make sure it is identified as an experiment.
+    metadata["type"] = "experiment"
+
+    structure_chunks.append(
+        Document(
+            page_content=chunk.page_content,
+            metadata=metadata
+        )
+    )
+
+
+# ============================================================================
+# 12. PRACTICAL PAPER-II EXPERIMENTS
+# ============================================================================
+#
+# Page 16 contains:
+#
+# 1
+# 2
+# 3
+# 4
+# 5
+# 6
+# 7
+# 8
+# 9 Project
+#
+# Experiment 6 has a multiline title.
+#
+# The PDF also says "Total no. of experiments: 12", but only 1-9 are actually
+# present in the extracted experiment table. We do NOT invent experiments
+# 10, 11 and 12.
+# ============================================================================
+
+print("Adding Practical Paper-II chunks...")
+
+
+practical_ii_experiments = [
+
+    (
+        "1",
+        "Fitting of lognormal distribution and computation of expected "
+        "frequencies. Plot of expected vs. observed frequencies."
+    ),
+
+    (
+        "2",
+        "Test for proportions and construction of confidence interval. "
+        "Verification of result using p-value approach."
+    ),
+
+    (
+        "3",
+        "Test for means and construction of confidence interval. "
+        "Verification of result using p-value approach."
+    ),
+
+    (
+        "4",
+        "Test based on chi square distribution "
+        "(i) Test for independence of attributes "
+        "(2 x 2, r x s contingency table) "
+        "(ii) Goodness of fit "
+        "(iii) McNemar's test."
+    ),
+
+    (
+        "5",
+        "Tests for population variance (one sample and two sample)."
+    ),
+
+    (
+        "6",
+        "Computation of probabilities of continuous uniform, exponential, "
+        "normal, log normal, gamma, chi square, t, and F distributions "
+        "using R software. Fitting of trivariate regression plane using "
+        "R software."
+    ),
+
+    (
+        "7",
+        "Tests using R software for: "
+        "(i) Proportions and means. "
+        "(ii) Chi square, Student's-t and Snedecor's-F distributions. "
+        "(iii) Significance of correlation coefficient and linear "
+        "regression coefficient."
+    ),
+
+    (
+        "8",
+        "Model sampling from standard discrete and continuous "
+        "distributions using R software."
+    ),
+
+    (
+        "9",
+        "Project: Project based on analysis of data collected by students "
+        "in groups of maximum 6 students. "
+        "(Project is equivalent to four practicals)"
+    )
+]
+
+
+for exp_number, exp_title in practical_ii_experiments:
+
+    add_chunk(
+        f"Practical Paper-II. Experiment {exp_number}: {exp_title}",
+        {
+            "type": "experiment",
+            "semester": "IV",
+            "paper": "Practical Paper - II",
+            "experiment_number": exp_number,
+            "start_page": 16,
+            "end_page": 16,
+            "source": "Statistics_syllabus.pdf"
+        }
+    )
+
+
+# ============================================================================
+# 13. PRACTICAL PAPER METADATA
+# ============================================================================
+
+# Practical Paper-I metadata
+
+add_chunk(
+    "Practical Paper-I | Semester III | "
+    "Paper Code: USSTP-233 | Number of credits: 2 | "
+    "Total no. of experiments: 11 | "
+    "Each practical is of duration: 4 hours 20 minutes.",
+    {
+        "type": "course_metadata",
+        "semester": "III",
+        "paper": "Practical Paper - I",
+        "paper_code": "USSTP-233",
+        "credits": 2,
+        "page": 10,
+        "source": "Statistics_syllabus.pdf"
+    }
+)
+
+
+# Practical Paper-II metadata
+
+add_chunk(
+    "Practical Paper-II | Semester IV | "
+    "Paper Code: USSTP-243 | Number of credits: 2 | "
+    "Total no. of experiments: 12 | "
+    "Each practical is of duration: 4 hours 20 minutes.",
+    {
+        "type": "course_metadata",
+        "semester": "IV",
+        "paper": "Practical Paper - II",
+        "paper_code": "USSTP-243",
+        "credits": 2,
+        "page": 16,
+        "source": "Statistics_syllabus.pdf"
+    }
+)
+
+
+# ============================================================================
+# 14. PROJECT - PAGE 17
+# ============================================================================
+
+page17_text = pages[16].page_content
+
+add_chunk(
+    clean_text(page17_text),
+    {
+        "type": "project",
+        "page": 17,
+        "source": "Statistics_syllabus.pdf"
+    }
+)
+
+
+# ============================================================================
+# 15. FINAL SUMMARY
+# ============================================================================
+
+print("\n")
+print("=" * 80)
+print("STRUCTURE-AWARE CHUNKING COMPLETE")
+print("=" * 80)
+
+print("\nTotal chunks:", len(structure_chunks))
+
+print("\nChunks by type:")
+
+chunk_counts = Counter(
+    chunk.metadata.get("type")
+    for chunk in structure_chunks
+)
+
+for chunk_type, count in chunk_counts.items():
+    print(f"{chunk_type:<20}: {count}")
+
+
+# ============================================================================
+# 16. CHECK EXPECTED COUNTS
+# ============================================================================
+
+print("\n")
+print("=" * 80)
+print("EXPECTED STRUCTURE CHECK")
+print("=" * 80)
+
+expected_counts = {
+    "document_info": 1,
+    "course_structure": 1,
+    "unit": 15,
+    "reference": 4,
+    "course_outcomes": 6,
+    "experiment": 20,
+    "course_metadata": 2,
+    "project": 1
+}
+
+for chunk_type, expected in expected_counts.items():
+
+    actual = chunk_counts.get(chunk_type, 0)
+
+    status = "OK" if actual == expected else "CHECK"
+
+    print(
+        f"{chunk_type:<20}: "
+        f"Actual = {actual:<3} "
+        f"Expected = {expected:<3} "
+        f"[{status}]"
+    )
+
+
+# ============================================================================
+# 17. CHECK ALL UNIT CHUNKS
+# ============================================================================
+
+print("\n")
+print("=" * 80)
+print("UNIT CHUNKS")
+print("=" * 80)
+
+for i, chunk in enumerate(structure_chunks):
+
+    if chunk.metadata.get("type") == "unit":
+
+        print("\n" + "-" * 80)
+
+        print("Chunk:", i)
+
+        print(
+            "Semester:",
+            chunk.metadata.get("semester")
+        )
+
+        print(
+            "Paper:",
+            chunk.metadata.get("paper")
+        )
+
+        print(
+            "Unit:",
+            chunk.metadata.get("unit_number")
+        )
+
+        print(
+            "Title:",
+            chunk.metadata.get("unit_title")
+        )
+
+        print(
+            "Lectures:",
+            chunk.metadata.get("lectures")
+        )
+
+        print(
+            "Pages:",
+            chunk.metadata.get("start_page"),
+            "to",
+            chunk.metadata.get("end_page")
+        )
+
+        print("\nCONTENT:")
+        print(chunk.page_content[:1200])
+
+
+# ============================================================================
+# 18. CHECK ALL EXPERIMENT METADATA
+# ============================================================================
+
+print("\n")
+print("=" * 80)
+print("ALL EXPERIMENT CHUNK METADATA")
+print("=" * 80)
+
+for chunk in structure_chunks:
+
+    if chunk.metadata.get("type") == "experiment":
+
+        print(
+            "Experiment:",
+            repr(chunk.metadata.get("experiment_number")),
+            "| Paper:",
+            repr(chunk.metadata.get("paper")),
+            "| Semester:",
+            repr(chunk.metadata.get("semester"))
+        )
+
+
+# ============================================================================
+# 19. CHECK PRACTICAL PAPER-I EXPERIMENT 9
+# ============================================================================
+
+print("\n")
+print("=" * 80)
+print("CHECK PRACTICAL PAPER-I EXPERIMENT 9")
+print("=" * 80)
+
+found_experiment_9 = False
+
+for chunk in structure_chunks:
+
+    if (
+        chunk.metadata.get("type") == "experiment"
+        and str(
+            chunk.metadata.get("experiment_number")
+        ).strip() == "9"
+        and (
+            chunk.metadata.get("paper") is None
+            or
+            "Practical Paper - I"
+            in str(chunk.metadata.get("paper"))
+        )
+    ):
+
+        found_experiment_9 = True
+
+        print("FOUND EXPERIMENT 9")
+
+        print(
+            "Page:",
+            chunk.metadata.get("page",
+            chunk.metadata.get("start_page"))
+        )
+
+        print(
+            "Metadata:",
+            chunk.metadata
+        )
+
+        print("\nCONTENT:")
+        print(chunk.page_content)
+
+
+if not found_experiment_9:
+
+    print("Experiment 9 was NOT found.")
+
+
+# ============================================================================
+# 20. FINAL EXPERIMENT COUNT
+# ============================================================================
+
+experiment_chunks_final = [
+    chunk
+    for chunk in structure_chunks
+    if chunk.metadata.get("type") == "experiment"
+]
+
+print("\n")
+print("=" * 80)
+print("FINAL EXPERIMENT COUNT")
+print("=" * 80)
+
+print(
+    "Total experiment chunks:",
+    len(experiment_chunks_final)
+)
+
+print(
+    "Expected:",
+    20
+)
+
+if len(experiment_chunks_final) == 20:
+    print("STATUS: SUCCESS")
+else:
+    print("STATUS: CHECK
+======================================================================================================================================================
+                                        EXPLANATION
+======================================================================================================================================================
+This is your complete structure-aware chunking program for the entire Statistics_syllabus.pdf, not just Practical Paper-I.
+
+The main idea is:
+
+Read the PDF → identify meaningful sections → create one LangChain Document per meaningful section → attach metadata → verify the resulting chunks.
+
+Your code handles document information, course structure, course outcomes, units, references, Practical Paper-I experiments, Practical Paper-II experiments, metadata, and project information.
+
+1. Import Document
+from langchain_core.documents import Document
+print("Document import successful!")
+from collections import Counter
+Document
+
+This is the LangChain object used to represent a chunk.
+
+A chunk has two important parts:
+
+Document
+├── page_content
+└── metadata
+
+For example:
+
+Document(
+    page_content="Experiment 9: Finding summary statistics...",
+    metadata={
+        "type": "experiment",
+        "experiment_number": "9",
+        "page": 10
+    }
+)
+Counter
+from collections import Counter
+
+Counter is used later to count how many chunks belong to each type.
+
+For example:
+
+unit             → 15
+experiment       → 20
+course_outcomes  → 6
+reference        → 4
+2. Reset the chunk list
+structure_chunks = []
+
+This creates an empty list.
+
+Every structure-aware chunk you create will be added here.
+
+Eventually:
+
+structure_chunks
+│
+├── document_info
+├── course_structure
+├── course_outcomes
+├── unit
+├── reference
+├── experiment
+├── course_metadata
+└── project
+3. clean_text() function
+def clean_text(text):
+
+This function cleans text extracted from the PDF.
+
+Remove null characters
+text = text.replace("\x00", " ")
+
+Some PDFs contain unwanted null characters.
+
+This replaces them with spaces.
+
+Remove excessive spaces
+text = re.sub(r"[ \t]+", " ", text)
+
+For example:
+
+"Probability     Distributions"
+
+becomes:
+
+"Probability Distributions"
+Clean excessive blank lines
+text = re.sub(r"\n\s*\n+", "\n\n", text)
+
+This prevents the extracted PDF text from having huge numbers of blank lines.
+
+Remove leading/trailing whitespace
+return text.strip()
+
+So the function essentially does:
+
+Raw PDF text
+     ↓
+Remove unwanted characters
+     ↓
+Remove excessive spaces
+     ↓
+Clean blank lines
+     ↓
+Return clean text
+4. add_chunk() function
+def add_chunk(page_content, metadata):
+
+This is a helper function that saves you from repeatedly writing:
+
+Document(...)
+structure_chunks.append(...)
+
+Inside:
+
+structure_chunks.append(
+    Document(
+        page_content=page_content.strip(),
+        metadata=metadata
+    )
+)
+
+So whenever you call:
+
+add_chunk(
+    "some text",
+    {"type": "unit", "page": 3}
+)
+
+a Document is created and added to structure_chunks.
+
+5. Document information — Page 1
+page1_text = pages[0].page_content
+
+Remember:
+
+pages[0] → PDF page 1
+
+Then:
+
+add_chunk(
+    clean_text(page1_text),
+    {
+        "type": "document_info",
+        "page": 1,
+        "source": "Statistics_syllabus.pdf"
+    }
+)
+
+This creates one chunk for the first page.
+
+Its metadata is approximately:
+
+{
+    "type": "document_info",
+    "page": 1,
+    "source": "Statistics_syllabus.pdf"
+}
+
+This chunk contains information such as the college, degree program, syllabus title, etc.
+
+6. Course structure — Page 2
+
+Same idea:
+
+page2_text = pages[1].page_content
+
+Because:
+
+pages[1] → PDF page 2
+
+Then you create:
+
+{
+    "type": "course_structure",
+    "page": 2,
+    "source": "Statistics_syllabus.pdf"
+}
+
+So now you have:
+
+Chunk 1 → Page 1 document information
+Chunk 2 → Page 2 course structure
+7. Define the theory papers
+theory_papers = [
+    ...
+]
+
+This is a manually defined map telling your program:
+
+Which pages belong to which theory paper?
+
+For example:
+
+{
+    "semester": "III",
+    "paper": "Probability Distributions - I",
+    "start_page": 3,
+    "end_page": 5
+}
+
+means:
+
+Semester III
+Probability Distributions-I
+Pages 3–5
+
+You have four theory papers:
+
+Probability Distributions-I
+Probability Distributions-II
+Statistical Methods
+Sampling Distributions and Exact Tests
+
+This information is later used by the unit parser and course-outcome parser.
+
+8. Extract course outcomes
+
+You define:
+
+def extract_course_outcomes(text):
+
+Its purpose is to find:
+
+Course Outcomes
+
+and collect the text belonging to that section.
+
+Find the beginning
+if re.search(r"Course\s+Outcomes", line, re.I):
+
+This looks for:
+
+Course Outcomes
+
+The regex also allows varying spaces.
+
+re.I means case-insensitive.
+
+So it can recognize:
+
+Course Outcomes
+COURSE OUTCOMES
+course outcomes
+Find where it ends
+
+You then look for:
+
+r"Units\s+and\s+Contents|Expt\.\s*No\.|Units\s*&\s*Contents"
+
+This tells the parser:
+
+Course Outcomes ends when the next major section starts.
+
+For example:
+
+Course Outcomes
+...
+...
+Units and Contents
+
+The parser takes only the Course Outcomes portion.
+
+9. Create theory course-outcome chunks
+for paper_info in theory_papers:
+
+The function is applied to each of the four theory papers.
+
+Therefore you expect:
+
+Probability Distributions-I       → 1 CO chunk
+Probability Distributions-II     → 1 CO chunk
+Statistical Methods              → 1 CO chunk
+Sampling Distributions...        → 1 CO chunk
+
+Total:
+
+4 theory course-outcome chunks
+10. Practical Paper-I course outcomes
+page10_text = pages[9].page_content
+
+Page 10 is Practical Paper-I.
+
+You reuse:
+
+extract_course_outcomes(page10_text)
+
+and create another course-outcome chunk.
+
+So now:
+
+4 theory CO chunks
++ 1 Practical-I CO chunk
+= 5
+11. Practical Paper-II course outcomes
+page16_text = pages[15].page_content
+
+PDF page 16 contains Practical Paper-II.
+
+You extract its Course Outcomes too.
+
+Therefore:
+
+4 theory
++ Practical-I
++ Practical-II
+= 6 course-outcome chunks
+
+This is why your expected count contains:
+
+"course_outcomes": 6
+12. The Unit Parser
+
+This is one of the most important parts of your code.
+
+def parse_units_for_paper(paper_info):
+
+Its job is to identify units such as:
+
+Unit 1: Continuous Univariate [10 Lectures]
+Unit 2: Continuous Bivariate [09 Lectures]
+Unit 3: Uniform [03 Lectures]
+
+and turn each unit into its own chunk.
+
+Why is the regex complicated?
+
+You explained that PDF extraction produces malformed text such as:
+
+[1 0 Lectures]
+[05 Lectu res]
+
+instead of:
+
+[10 Lectures]
+[05 Lectures]
+
+Therefore your regex deliberately allows spaces:
+
+r"^Unit\s+(\d+)\s*:\s*(.*?)"
+r"\[\s*([0-9\s]+)\s*Lectu\s*res?\s*\]"
+
+This is designed to tolerate the PDF extraction problems.
+
+13. Track the current unit
+
+You initialize:
+
+current_unit_number = None
+current_unit_title = None
+current_unit_lectures = None
+current_unit_content = []
+current_unit_pages = []
+
+These variables work similarly to your Practical Paper-I experiment parser.
+
+For example, while processing Unit 2:
+
+current_unit_number
+        ↓
+       "2"
+
+current_unit_title
+        ↓
+"Continuous Bivariate"
+
+current_unit_content
+        ↓
+all text belonging to Unit 2
+
+current_unit_pages
+        ↓
+pages containing Unit 2
+14. Go through every page
+for page_number in range(start_page, end_page + 1):
+
+Suppose:
+
+start_page = 3
+end_page = 5
+
+then Python processes:
+
+3
+4
+5
+
+For each page:
+
+text = pages[page_number - 1].page_content
+
+Again, you're converting human page numbers to Python's zero-based indexing.
+
+15. Detect a new Unit
+unit_match = re.match(...)
+
+When the parser sees something like:
+
+Unit 1: Continuous Univariate [10 Lectures]
+
+it extracts:
+
+unit number → 1
+title       → Continuous Univariate
+lectures    → 10
+16. Save the previous Unit
+
+This is the same important idea you used for experiments.
+
+When Unit 2 is detected, the parser knows:
+
+Unit 1 has finished.
+
+So it saves Unit 1:
+
+add_chunk(
+    content,
+    {
+        "type": "unit",
+        ...
+    }
+)
+
+The metadata contains:
+
+{
+    "type": "unit",
+    "semester": semester,
+    "paper": paper,
+    "unit_number": current_unit_number,
+    "unit_title": current_unit_title,
+    "lectures": [current_unit_lectures],
+    "start_page": ...,
+    "end_page": ...,
+    "source": "Statistics_syllabus.pdf"
+}
+
+This is excellent metadata for retrieval.
+
+17. Continue collecting Unit content
+
+If the line isn't a new Unit:
+
+else:
+    if current_unit_number is not None:
+        current_unit_content.append(
+            (page_number, stripped)
+        )
+
+The line gets added to the current Unit.
+
+Importantly, you're storing:
+
+(page_number, stripped)
+
+rather than just:
+
+stripped
+
+This preserves the page information while collecting content.
+
+18. Save the final Unit
+
+Just like your Experiment parser, the final Unit needs special treatment.
+
+At the end:
+
+if current_unit_number is not None:
+
+you save the last Unit.
+
+Otherwise, the final Unit would remain in memory and wouldn't become a chunk.
+
+19. Parse all four theory papers
+for paper_info in theory_papers:
+    parse_units_for_paper(paper_info)
+
+This runs your Unit parser four times.
+
+According to your expected structure, you have:
+
+Probability Distributions-I
+→ 5 units
+
+Probability Distributions-II
+→ 3 units
+
+Statistical Methods
+→ 3 units
+
+Sampling Distributions and Exact Tests
+→ 3 units
+
+Therefore:
+
+5 + 3 + 3 + 3 = 14
+
+However, your code's expected count says 15 units.
+
+That is something worth checking.
+
+Based on the unit counts you previously identified, you had:
+
+5 + 3 + 3 + 3 = 14
+
+So if your program actually produces 15, one of the papers probably contains an additional detected Unit, or your earlier count was incomplete.
+
+This is exactly why your EXPECTED STRUCTURE CHECK is useful.
+
+20. References
+
+You define:
+
+reference_pages = [...]
+
+This says which page contains the references for each paper.
+
+Then:
+
+for ref in reference_pages:
+
+creates one reference chunk per paper.
+
+Therefore:
+
+4 theory papers
+        ↓
+4 reference chunks
+
+Each gets metadata such as:
+
+{
+    "type": "reference",
+    "semester": "III",
+    "paper": "...",
+    "page": 6,
+    "source": "Statistics_syllabus.pdf"
+}
+21. Reuse Practical Paper-I experiments
+
+This is an important design decision:
+
+for chunk in experiment_chunks:
+
+You don't parse Practical Paper-I again.
+
+You already created and verified those chunks using your earlier parser.
+
+You simply copy them into:
+
+structure_chunks
+
+This avoids duplicating the parsing logic.
+
+If there are 11 experiments:
+
+structure_chunks
+        +
+11 Practical-I experiment chunks
+22. Copy the metadata
+metadata = dict(chunk.metadata)
+
+This makes a copy of the metadata rather than modifying the original metadata dictionary.
+
+Then:
+
+metadata["type"] = "experiment"
+
+ensures the chunk is classified as an experiment.
+
+Finally:
+
+structure_chunks.append(
+    Document(
+        page_content=chunk.page_content,
+        metadata=metadata
+    )
+)
+
+adds the experiment to your complete structure.
+
+23. Practical Paper-II experiments
+
+Instead of automatically parsing the PDF, you've manually created:
+
+practical_ii_experiments = [
+    ("1", "..."),
+    ("2", "..."),
+    ...
+    ("9", "Project...")
+]
+
+This is important because your PDF extraction apparently contains only experiments 1–9 in the actual extracted table, despite saying:
+
+Total no. of experiments: 12
+
+Your code correctly avoids inventing:
+
+Experiment 10
+Experiment 11
+Experiment 12
+
+That's a good data-handling principle:
+
+Don't create information that isn't actually present in the source.
+
+You therefore create 9 Practical Paper-II experiment chunks.
+
+24. Practical Paper metadata
+
+You create a separate chunk containing information such as:
+
+Paper Code: USSTP-233
+Number of credits: 2
+Total no. of experiments: 11
+Each practical is of duration: 4 hours 20 minutes
+
+This is classified as:
+
+"type": "course_metadata"
+
+You do the same for Practical Paper-II.
+
+Therefore:
+
+course_metadata = 2
+25. Project — Page 17
+page17_text = pages[16].page_content
+
+Because:
+
+pages[16] → PDF page 17
+
+You store that page as:
+
+"type": "project"
+
+Therefore:
+
+project = 1
+26. Final summary
+
+Now:
+
+print("Total chunks:", len(structure_chunks))
+
+tells you how many total structure-aware chunks you've created.
+
+Then:
+
+chunk_counts = Counter(
+    chunk.metadata.get("type")
+    for chunk in structure_chunks
+)
+
+counts them by type.
+
+For example:
+
+document_info       : 1
+course_structure    : 1
+course_outcomes     : 6
+unit                : 15
+reference           : 4
+experiment          : 20
+course_metadata     : 2
+project             : 1
+27. Expected structure check
+
+This part:
+
+expected_counts = {
+    ...
+}
+
+defines what you expect.
+
+Then:
+
+actual = chunk_counts.get(chunk_type, 0)
+
+gets the actual number.
+
+And:
+
+status = "OK" if actual == expected else "CHECK"
+
+compares actual versus expected.
+
+So you might see:
+
+unit                : Actual = 15  Expected = 15  [OK]
+experiment          : Actual = 20  Expected = 20  [OK]
+reference           : Actual = 4   Expected = 4   [OK]
+
+This is essentially a quality-control check.
+
+28. Check all Unit chunks
+
+This section:
+
+for i, chunk in enumerate(structure_chunks):
+
+    if chunk.metadata.get("type") == "unit":
+
+looks only at Unit chunks.
+
+It prints:
+
+Chunk
+Semester
+Paper
+Unit
+Title
+Lectures
+Pages
+CONTENT
+
+This allows you to manually inspect whether your Unit parser worked.
+
+For example:
+
+Chunk: 7
+Semester: III
+Paper: Probability Distributions - I
+Unit: 3
+Title: Uniform
+Lectures: ['03']
+Pages: 4 to 4
+29. Check all experiment metadata
+
+This:
+
+if chunk.metadata.get("type") == "experiment":
+
+selects all experiment chunks.
+
+Then it prints:
+
+Experiment: '1' | Paper: ...
+Experiment: '2' | Paper: ...
+...
+Experiment: '9' | Paper: ...
+
+This helps you verify that your metadata is correctly attached.
+
+30. Specifically check Experiment 9
+
+This is your targeted test:
+
+if (
+    chunk.metadata.get("type") == "experiment"
+    and str(
+        chunk.metadata.get("experiment_number")
+    ).strip() == "9"
+
+You're asking:
+
+Find an experiment chunk whose experiment number is 9.
+
+Then you additionally check that it belongs to Practical Paper-I:
+
+"Practical Paper - I"
+in str(chunk.metadata.get("paper"))
+
+If found:
+
+FOUND EXPERIMENT 9
+
+and you print its:
+
+page
+metadata
+content
+
+This is a very useful retrieval/chunking validation test.
+
+31. Final experiment count
+
+Finally:
+
+experiment_chunks_final = [
+    chunk
+    for chunk in structure_chunks
+    if chunk.metadata.get("type") == "experiment"
+]
+
+This creates a list containing only experiment chunks.
+
+Then:
+
+len(experiment_chunks_final)
+
+counts them.
+
+Your expected total is:
+
+11 Practical Paper-I
++
+9 Practical Paper-II
+---------------------
+20 experiments
+
+So:
+
+Total experiment chunks: 20
+Expected: 20
+STATUS: SUCCESS
+The entire architecture
+
+Your program is essentially creating this:
+
+                    Statistics_syllabus.pdf
+                             │
+                             ▼
+                       PyPDFLoader
+                             │
+                             ▼
+                          17 pages
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+              ▼              ▼              ▼
+       Document Info   Course Structure   Theory Papers
+          Page 1           Page 2              │
+                                               ▼
+                                      Course Outcomes
+                                               │
+                                               ▼
+                                             Units
+                                               │
+                                               ▼
+                                          References
+
+              Practical Papers
+                     │
+          ┌──────────┴──────────┐
+          ▼                     ▼
+     Practical-I           Practical-II
+          │                     │
+     11 experiments        9 experiments
+          │                     │
+          └──────────┬──────────┘
+                     ▼
+              Course Metadata
+
+                     +
+
+                  Project
+                  Page 17
+                     │
+                     ▼
+             structure_chunks
+Most important point for your assignment
+
+Your original fixed-size approach was essentially:
+
+PDF
+ ↓
+500 characters
+ ↓
+500 characters
+ ↓
+500 characters
+
+Your new approach is:
+
+PDF
+ ↓
+Understand document structure
+ ↓
+┌───────────────────────┐
+│ Document information  │
+│ Course structure      │
+│ Course outcomes       │
+│ Unit 1                │
+│ Unit 2                │
+│ Unit 3                │
+│ References            │
+│ Experiment 1          │
+│ Experiment 2          │
+│ ...                   │
+│ Experiment 9          │
+│ Project               │
+└───────────────────────┘
+ ↓
+Structure-aware chunks
+ ↓
+Embeddings
+ ↓
+Chroma
+ ↓
+Retriever
+
+That is the key improvement: the chunk boundaries are based on the semantic/document structure rather than an arbitrary character count.
+
+One thing I would check in your current code
+
+Your expected count says:
+
+"unit": 15
+
+but the paper/unit counts you previously identified were 5 + 3 + 3 + 3 = 14. So before moving to embeddings/Chroma, I would inspect the actual Unit output and determine exactly where the 15th Unit is coming from. That will make your assignment explanation much stronger.
